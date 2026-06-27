@@ -164,7 +164,7 @@ function answer(choice){
   } else {
     chosen.classList.remove('reveal'); chosen.classList.add('wrong');
     right.classList.remove('reveal'); right.classList.add('correct');
-    fb.className='feedback fail'; fb.textContent=`No, esta figura es ${fig.answer}.`;
+    fb.className='feedback fail'; fb.textContent=`No, este polígono es ${fig.answer}.`;
   }
   document.getElementById('score-pill').textContent=`${correct} / ${results.length}`;
   renderProgress();
