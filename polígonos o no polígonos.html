@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polígonos y No Polígonos</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #fff8f0; min-height: 100vh; padding: 24px 16px; }
+
+.header { max-width: 680px; margin: 0 auto 20px auto; }
+h1 { font-size: 21px; color: #c0392b; font-style: italic; border-bottom: 2px solid #c0392b; padding-bottom: 6px; margin-bottom: 8px; }
+.top-row { display: flex; justify-content: space-between; align-items: center; }
+.hoja-label { font-size: 13px; color: #888; }
+.puntaje-pill { font-size: 13px; color: #555; background: #fff; border: 1px solid #ddd; border-radius: 20px; padding: 4px 14px; }
+
+.progress-bar-wrap { max-width: 680px; margin: 0 auto 20px auto; background: #eee; border-radius: 10px; height: 7px; }
+.progress-bar-fill { height: 7px; border-radius: 10px; background: #c0392b; transition: width 0.4s; }
+
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 680px; margin: 0 auto 24px auto; }
+
+.figura-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; background: #fff; border: 1px solid #e8d5d5; border-radius: 14px; padding: 16px 10px 14px 10px; transition: box-shadow 0.2s; }
+.figura-wrap.correcto { border-color: #27ae60; box-shadow: 0 0 0 2px #27ae6040; }
+.figura-wrap.incorrecto { border-color: #e74c3c; box-shadow: 0 0 0 2px #e74c3c40; }
+
+.canvas-box { width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; }
+canvas { display: block; }
+
+.estado-icon { font-size: 13px; min-height: 18px; color: #555; font-weight: 500; text-align: center; }
+
+.check-row { display: flex; align-items: center; gap: 7px; cursor: pointer; }
+.check-row input[type="checkbox"] { width: 17px; height: 17px; cursor: pointer; accent-color: #c0392b; }
+.check-row span { font-size: 13px; color: #444; font-style: italic; cursor: pointer; }
+
+.btn-row { display: flex; gap: 12px; justify-content: center; max-width: 680px; margin: 0 auto 10px auto; }
+.btn-principal { padding: 11px 36px; background: #c0392b; color: #fff; border: none; border-radius: 10px; font-size: 15px; cursor: pointer; font-weight: 600; }
+.btn-principal:hover { background: #a93226; }
+.btn-secundario { padding: 11px 36px; background: #fff; color: #c0392b; border: 2px solid #c0392b; border-radius: 10px; font-size: 15px; cursor: pointer; font-weight: 600; display: none; }
+.btn-secundario:hover { background: #fff0ee; }
+
+.feedback-hoja { text-align: center; font-size: 15px; font-weight: 600; min-height: 22px; margin-bottom: 6px; }
+.feedback-hoja.bien { color: #27ae60; }
+.feedback-hoja.regular { color: #e67e22; }
+
+/* Pantalla final */
+.finish { max-width: 480px; margin: 40px auto; background: #fff; border: 1px solid #e8d5d5; border-radius: 16px; padding: 36px 24px; text-align: center; }
+.finish h2 { font-size: 22px; color: #c0392b; margin-bottom: 10px; }
+.finish p { font-size: 15px; color: #666; margin-bottom: 24px; }
+.finish .puntaje-grande { font-size: 48px; font-weight: 700; color: #c0392b; margin: 12px 0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="titulo">Marcá los que sean polígonos...</h1>
+  <div class="top-row">
+    <span class="hoja-label" id="hoja-label">Hoja 1 de 4</span>
+    <span class="puntaje-pill" id="puntaje-pill">0 / 0</span>
+  </div>
+</div>
+
+<div class="progress-bar-wrap">
+  <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="feedback-hoja" id="feedback-hoja"></div>
+<div class="btn-row">
+  <button class="btn-principal" id="btn-main" onclick="accionPrincipal()">Verificar</button>
+  <button class="btn-secundario" id="btn-next" onclick="siguienteHoja()">Siguiente hoja →</button>
+</div>
+
+<script>
+const COLOR_STROKE = "#c0392b";
+const COLOR_FILL = "rgba(192,57,43,0.12)";
+
+function drawPolygon(ctx, pts, cx, cy) {
+  ctx.beginPath();
+  pts.forEach(([x,y], i) => i===0 ? ctx.moveTo(cx+x, cy+y) : ctx.lineTo(cx+x, cy+y));
+  ctx.closePath();
+  ctx.fillStyle = COLOR_FILL; ctx.fill();
+  ctx.strokeStyle = COLOR_STROKE; ctx.lineWidth = 2.5; ctx.stroke();
+}
+
+function drawCurve(ctx, fn) {
+  ctx.fillStyle = COLOR_FILL;
+  ctx.strokeStyle = COLOR_STROKE;
+  ctx.lineWidth = 2.5;
+  fn(ctx);
+}
+
+const todasLasFiguras = [
+  // POLÍGONOS
+  { esPoligono: true, draw: (ctx, cx, cy) => {
+    const pts = Array.from({length:5},(_,i)=>{ const a=Math.PI/2+i*2*Math.PI/5; return [Math.cos(a)*58,-Math.sin(a)*58]; });
+    drawPolygon(ctx, pts, cx, cy);
+  }},
+  { esPoligono: true, draw: (ctx, cx, cy) => {
+    drawPolygon(ctx, [[-10,-58],[48,-15],[30,52],[-42,52],[-52,-10]], cx, cy);
+  }},
+  { esPoligono: true, draw: (ctx, cx, cy) => {
+    drawPolygon(ctx, [[0,-58],[58,45],[-58,45]], cx, cy);
+  }},
+  { esPoligono: true, draw: (ctx, cx, cy) => {
+    const pts = Array.from({length:6},(_,i)=>{ const a=i*Math.PI/3; return [Math.cos(a)*58,Math.sin(a)*58]; });
+    drawPolygon(ctx, pts, cx, cy);
+  }},
+  { esPoligono: true, draw: (ctx, cx, cy) => {
+    drawPolygon(ctx, [[-58,-22],[22,-58],[58,22],[-22,58]], cx, cy);
+  }},
+  { esPoligono: true, draw: (ctx, cx, cy) => {
+    drawPolygon(ctx, [[-55,-30],[-12,-58],[38,-48],[58,15],[20,55],[-48,38]], cx, cy);
+  }},
+  { esPoligono: true, draw: (ctx, cx, cy) => {
+    drawPolygon(ctx, [[-55,12],[-18,-52],[36,-52],[55,12],[0,56]], cx, cy);
+  }},
+  // NO POLÍGONOS
+  { esPoligono: false, draw: (ctx, cx, cy) => {
+    // Figura con lados que se cruzan
+    drawCurve(ctx, () => {
+      ctx.beginPath();
+      ctx.moveTo(cx-52, cy+42); ctx.lineTo(cx+12, cy-52);
+      ctx.lineTo(cx+52, cy+42); ctx.lineTo(cx-32, cy-10);
+      ctx.lineTo(cx+32, cy-10); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    });
+  }},
+  { esPoligono: false, draw: (ctx, cx, cy) => {
+    // Figura abierta (flecha sin cerrar)
+    drawCurve(ctx, () => {
+      ctx.beginPath();
+      ctx.moveTo(cx-52, cy-20); ctx.lineTo(cx+8, cy-20);
+      ctx.lineTo(cx+8, cy-52); ctx.lineTo(cx+58, cy);
+      ctx.lineTo(cx+8, cy+52); ctx.lineTo(cx+8, cy+20);
+      ctx.lineTo(cx-52, cy+20);
+      ctx.stroke(); // abierta
+    });
+  }},
+  { esPoligono: false, draw: (ctx, cx, cy) => {
+    // Círculo
+    drawCurve(ctx, () => {
+      ctx.beginPath(); ctx.arc(cx, cy, 56, 0, Math.PI*2);
+      ctx.fill(); ctx.stroke();
+    });
+  }},
+  { esPoligono: false, draw: (ctx, cx, cy) => {
+    // Semicírculo
+    drawCurve(ctx, () => {
+      ctx.beginPath();
+      ctx.moveTo(cx-56, cy+10); ctx.lineTo(cx+56, cy+10);
+      ctx.arc(cx, cy+10, 56, 0, Math.PI, true);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    });
+  }},
+  { esPoligono: false, draw: (ctx, cx, cy) => {
+    // Figura con lado curvo
+    drawCurve(ctx, () => {
+      ctx.beginPath();
+      ctx.moveTo(cx-52, cy-42); ctx.lineTo(cx+52, cy-42);
+      ctx.lineTo(cx+52, cy+18);
+      ctx.quadraticCurveTo(cx, cy+72, cx-52, cy+18);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    });
+  }},
+  { esPoligono: false, draw: (ctx, cx, cy) => {
+    // Óvalo
+    drawCurve(ctx, () => {
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 58, 38, 0, 0, Math.PI*2);
+      ctx.fill(); ctx.stroke();
+    });
+  }},
+  { esPoligono: false, draw: (ctx, cx, cy) => {
+    // Figura mixta: lados rectos y curvo
+    drawCurve(ctx, () => {
+      ctx.beginPath();
+      ctx.moveTo(cx-52, cy+42); ctx.lineTo(cx-52, cy-42);
+      ctx.lineTo(cx+10, cy-42);
+      ctx.quadraticCurveTo(cx+72, cy, cx+10, cy+42);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    });
+  }},
+];
+
+// Armar hojas de 3 figuras garantizando 2+1 por hoja
+function shuffle(arr){ return [...arr].sort(()=>Math.random()-0.5); }
+
+let hojas = [];
+let hojaActual = 0;
+let correctasTotal = 0;
+let respondidoTotal = 0;
+let verificado = false;
+let angulos = [];
+let velocidades = [];
+let animFrame;
+let checksActuales = [];
+
+function armarHojas() {
+  // Separar en polígonos y no polígonos, mezclar cada grupo
+  let polis = shuffle(todasLasFiguras.filter(f=>f.esPoligono));
+  let noPolis = shuffle(todasLasFiguras.filter(f=>!f.esPoligono));
+  hojas = [];
+  // Alternar hojas: 2 polígonos + 1 no polígono, luego 1 polígono + 2 no polígonos
+  let pi = 0, ni = 0, turno = 0;
+  while (pi < polis.length || ni < noPolis.length) {
+    let hoja = [];
+    if (turno % 2 === 0) {
+      // 2 polígonos + 1 no polígono
+      if (pi < polis.length) hoja.push(polis[pi++]);
+      if (pi < polis.length) hoja.push(polis[pi++]);
+      if (ni < noPolis.length) hoja.push(noPolis[ni++]);
+    } else {
+      // 1 polígono + 2 no polígonos
+      if (pi < polis.length) hoja.push(polis[pi++]);
+      if (ni < noPolis.length) hoja.push(noPolis[ni++]);
+      if (ni < noPolis.length) hoja.push(noPolis[ni++]);
+    }
+    if (hoja.length > 0) hojas.push(shuffle(hoja));
+    turno++;
+  }
+}
+
+function iniciarHoja() {
+  verificado = false;
+  checksActuales = hojas[hojaActual].map(()=>false);
+  angulos = hojas[hojaActual].map(()=>Math.random()*Math.PI*2);
+  velocidades = hojas[hojaActual].map(()=>(Math.random()*0.008+0.004)*(Math.random()<0.5?1:-1));
+
+  document.getElementById('hoja-label').textContent = `Hoja ${hojaActual+1} de ${hojas.length}`;
+  document.getElementById('feedback-hoja').textContent = '';
+  document.getElementById('feedback-hoja').className = 'feedback-hoja';
+  document.getElementById('btn-main').textContent = 'Verificar';
+  document.getElementById('btn-main').style.display = 'inline-block';
+  document.getElementById('btn-next').style.display = 'none';
+
+  const pct = Math.round(hojaActual / hojas.length * 100);
+  document.getElementById('progress-bar').style.width = pct + '%';
+
+  buildGrid();
+}
+
+function buildGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  hojas[hojaActual].forEach((fig, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'figura-wrap';
+    wrap.id = `wrap-${i}`;
+
+    const box = document.createElement('div');
+    box.className = 'canvas-box';
+    const canvas = document.createElement('canvas');
+    canvas.width = 150; canvas.height = 150;
+    canvas.id = `canvas-${i}`;
+    box.appendChild(canvas);
+
+    const icon = document.createElement('div');
+    icon.className = 'estado-icon';
+    icon.id = `icon-${i}`;
+
+    const label = document.createElement('label');
+    label.className = 'check-row';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = `cb-${i}`;
+    cb.onchange = () => { checksActuales[i] = cb.checked; };
+    const span = document.createElement('span');
+    span.textContent = '¿Es polígono?';
+    label.appendChild(cb); label.appendChild(span);
+
+    wrap.appendChild(box);
+    wrap.appendChild(icon);
+    wrap.appendChild(label);
+    grid.appendChild(wrap);
+  });
+}
+
+function dibujarHoja() {
+  hojas[hojaActual].forEach((fig, i) => {
+    const canvas = document.getElementById(`canvas-${i}`);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,150,150);
+    ctx.save();
+    ctx.translate(75,75);
+    ctx.rotate(angulos[i]);
+    ctx.translate(-75,-75);
+    fig.draw(ctx, 75, 75);
+    ctx.restore();
+  });
+}
+
+function animar() {
+  if (!verificado) {
+    angulos = angulos.map((a,i)=>a+velocidades[i]);
+  }
+  dibujarHoja();
+  animFrame = requestAnimationFrame(animar);
+}
+
+function accionPrincipal() {
+  if (verificado) return;
+  verificado = true;
+  let correctasHoja = 0;
+  const esUltimaHoja = hojaActual === hojas.length - 1;
+
+  hojas[hojaActual].forEach((fig, i) => {
+    const wrap = document.getElementById(`wrap-${i}`);
+    const icon = document.getElementById(`icon-${i}`);
+    const cb = document.getElementById(`cb-${i}`);
+    cb.disabled = true;
+    const correcto = checksActuales[i] === fig.esPoligono;
+    respondidoTotal++;
+    if (correcto) { correctasHoja++; correctasTotal++; wrap.classList.add('correcto'); icon.textContent = '✅ ¡Correcto!'; }
+    else { wrap.classList.add('incorrecto'); icon.textContent = fig.esPoligono ? '❌ Sí era polígono' : '❌ No era polígono'; }
+  });
+
+  document.getElementById('puntaje-pill').textContent = `${correctasTotal} / ${respondidoTotal}`;
+  const fb = document.getElementById('feedback-hoja');
+  const pct = Math.round(correctasHoja / hojas[hojaActual].length * 100);
+  fb.textContent = pct === 100 ? '¡Perfecto! Las 3 correctas 🎉' : pct >= 66 ? '¡Bien! Casi todas correctas.' : 'Revisá las que quedaron en rojo.';
+  fb.className = 'feedback-hoja ' + (pct >= 66 ? 'bien' : 'regular');
+
+  document.getElementById('btn-main').style.display = 'none';
+  if (!esUltimaHoja) {
+    document.getElementById('btn-next').style.display = 'inline-block';
+  } else {
+    // En la última hoja mostramos el feedback de las figuras y después el botón para ver el puntaje final
+    const btnFinal = document.getElementById('btn-next');
+    btnFinal.textContent = 'Ver puntaje final →';
+    btnFinal.style.display = 'inline-block';
+    btnFinal.onclick = mostrarFinal;
+  }
+}
+
+function siguienteHoja() {
+  hojaActual++;
+  iniciarHoja();
+}
+
+function mostrarFinal() {
+  cancelAnimationFrame(animFrame);
+  const pct = Math.round(correctasTotal / respondidoTotal * 100);
+  const msg = pct===100 ? '¡Perfecto! ¡Clasificaste todo correctamente!' : pct>=70 ? '¡Muy bien! Ya sabés distinguirlos.' : '¡Seguí practicando, vas a poder!';
+  document.getElementById('grid').innerHTML = '';
+  document.getElementById('feedback-hoja').textContent = '';
+  document.getElementById('btn-next').style.display = 'none';
+  document.getElementById('btn-main').style.display = 'none';
+  document.getElementById('progress-bar').style.width = '100%';
+
+  const finish = document.createElement('div');
+  finish.className = 'finish';
+  finish.innerHTML = `
+    <h2>¡Terminaste!</h2>
+    <div class="puntaje-grande">${correctasTotal}/${respondidoTotal}</div>
+    <p>${msg}</p>
+    <button class="btn-principal" onclick="reiniciar()">Jugar de nuevo</button>`;
+  document.querySelector('.btn-row').after(finish);
+}
+
+function reiniciar() {
+  correctasTotal = 0; respondidoTotal = 0; hojaActual = 0;
+  document.getElementById('puntaje-pill').textContent = '0 / 0';
+  const finish = document.querySelector('.finish');
+  if (finish) finish.remove();
+  armarHojas();
+  if (animFrame) cancelAnimationFrame(animFrame);
+  iniciarHoja();
+  animar();
+}
+
+armarHojas();
+iniciarHoja();
+animar();
+</script>
+</body>
+</html>
